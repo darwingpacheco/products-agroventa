@@ -22,7 +22,7 @@ services:
 
   app:
     build:
-      context: .
+      context: products
       dockerfile: Dockerfile
     container_name: products-api
     env_file:
