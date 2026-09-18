@@ -22,8 +22,8 @@ services:
 
   app:
     build:
-      context: products
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: DockerFile
     container_name: products-api
     env_file:
       - .env
@@ -39,6 +39,16 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION_SECONDS: ${JWT_EXPIRATION_SECONDS}
       JWT_ISSUER: ${JWT_ISSUER}
+      AWS_REGION: ${AWS_REGION}
+      AWS_DEFAULT_REGION: ${AWS_REGION}
+      AWS_S3_BUCKET_NAME: ${AWS_S3_BUCKET_NAME}
+      AWS_S3_PUBLIC_BASE_URL: ${AWS_S3_PUBLIC_BASE_URL}
+      AWS_S3_PREFIX: ${AWS_S3_PREFIX}
+      AWS_S3_MAX_FILE_SIZE: ${AWS_S3_MAX_FILE_SIZE}
+      AWS_S3_ALLOWED_CONTENT_TYPES: ${AWS_S3_ALLOWED_CONTENT_TYPES}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN}
     ports:
       - "8080:8080"
     restart: unless-stopped

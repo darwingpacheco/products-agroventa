@@ -7,6 +7,8 @@ import com.agro_venta.products.infrastructure.entity.SellProducEntity;
 import com.agro_venta.products.interfaces.rest.dto.SellRequest;
 import com.agro_venta.products.interfaces.rest.dto.SellResponse;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 public class SellProductMapper {
@@ -28,7 +30,25 @@ public class SellProductMapper {
         return sellProducEntity;
     }
 
-    public static SellDTO sellInputToDTO(SellRequest request){
+    public static SoldProduct sellEntityToDomain(SellProducEntity entity) {
+        return new SoldProduct(
+                entity.getId(),
+                entity.getSellerId(),
+                entity.getName(),
+                entity.getDescription(),
+                entity.getCategory(),
+                entity.getQuantity(),
+                entity.getUnit(),
+                entity.getUnitPrice(),
+                entity.getTotalPrice(),
+                entity.getOriginLocation(),
+                entity.getImageUrls() == null ? Collections.emptyList() : entity.getImageUrls(),
+                "El producto se ha publicado exitosamente",
+                entity.getStatus()
+        );
+    }
+
+    public static SellDTO sellInputToDTO(SellRequest request, List<String> imageUrls){
         return SellDTO.builder()
                 .name(request.name())
                 .description(request.description())
@@ -37,14 +57,28 @@ public class SellProductMapper {
                 .unit(request.unit())
                 .unitPrice(request.unitPrice())
                 .originLocation(request.originLocation())
-                .images(request.images())
+                .images(imageUrls)
                 .build();
+    }
+
+    public static SellDTO sellInputToDTO(SellRequest request){
+        return sellInputToDTO(request, List.of());
     }
 
     public static SellResponse toSellResponse(SoldProduct soldProduct) {
         return new SellResponse(
                 soldProduct.id(),
-                SellStatusEnum.EN_VENTA.toString(),
+                soldProduct.sellerId(),
+                soldProduct.name(),
+                soldProduct.description(),
+                soldProduct.category(),
+                soldProduct.quantity(),
+                soldProduct.unit(),
+                soldProduct.unitPrice(),
+                soldProduct.totalPrice(),
+                soldProduct.originLocation(),
+                soldProduct.imageUrls(),
+                soldProduct.message(),
                 soldProduct.status()
         );
     }
