@@ -15,4 +15,6 @@ public class S3Properties {
     private String prefix;
     private long maxFileSize;
     private List<String> allowedContentTypes;
+    private String accessKey;
+    private String secretKey;
 }
