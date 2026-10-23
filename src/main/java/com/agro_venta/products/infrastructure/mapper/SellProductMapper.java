@@ -16,7 +16,6 @@ public class SellProductMapper {
 
     public static SellProducEntity sellDtoToEntity(SellDTO sellDTO) {
         SellProducEntity entity = new SellProducEntity();
-        // sellerId comes from the JWT via the DTO (NOT randomly generated)
         entity.setSellerId(sellDTO.getSellerId());
         entity.setName(sellDTO.getName());
         entity.setDescription(sellDTO.getDescription());
@@ -33,19 +32,15 @@ public class SellProductMapper {
                 sellDTO.getDestinationCities() != null
                         ? sellDTO.getDestinationCities().toArray(new String[0])
                         : new String[0]);
+
         entity.setImageUrls(
                 sellDTO.getImages() != null
-                        ? sellDTO.getImages().toArray(new String[0])
+                        ? sellDTO.getImages().toArray(String[]::new)
                         : new String[0]);
+
         entity.setStatus(SellStatusEnum.EN_VENTA.toString());
         entity.setHarvestDate(sellDTO.getHarvestDate());
         return entity;
-    }
-
-    /** @deprecated use sellDtoToEntity instead */
-    @Deprecated
-    public static SellProducEntity sellDtoToEntiy(SellDTO sellDTO) {
-        return sellDtoToEntity(sellDTO);
     }
 
     public static SoldProduct sellEntityToDomain(SellProducEntity entity) {
