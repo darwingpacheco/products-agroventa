@@ -15,18 +15,18 @@ public class S3Config {
 
     @Bean
     public S3Client s3Client(S3Properties properties) {
+        var builder = S3Client.builder()
+                .region(Region.of(properties.getRegion() != null && !properties.getRegion().isBlank()
+                        ? properties.getRegion() : "us-east-1"));
 
-        AwsBasicCredentials credentials =
-                AwsBasicCredentials.create(
-                        properties.getAccessKey(),
-                        properties.getSecretKey()
-                );
+        if (properties.getAccessKey() != null && !properties.getAccessKey().isBlank()) {
+            builder.credentialsProvider(StaticCredentialsProvider.create(
+                    AwsBasicCredentials.create(properties.getAccessKey(), properties.getSecretKey())));
+        } else {
+            // In ECS Fargate, credentials come from the Task IAM Role automatically
+            builder.credentialsProvider(DefaultCredentialsProvider.create());
+        }
 
-        return S3Client.builder()
-                .region(Region.of(properties.getRegion()))
-                .credentialsProvider(
-                        StaticCredentialsProvider.create(credentials)
-                )
-                .build();
+        return builder.build();
     }
 }

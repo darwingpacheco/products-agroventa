@@ -1,0 +1,65 @@
+name: 4. Deploy to ECS
+
+on:
+  workflow_run:
+    workflows: ["3. Build & Publish to ECR"]
+    types:
+      - completed
+
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag/Versión a desplegar en ECS (ej. v1.0.0). Dejar vacío para desplegar latest'
+        required: false
+        default: 'latest'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-ecs:
+    name: Deploy Image to Fargate
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Resolve Target Image Tag
+        id: resolve-tag
+        run: |
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          else
+            # Respaldo: consulta el último tag de Git o usa latest
+            TAG="latest"
+          fi
+          echo "DEPLOY_TAG=$TAG" >> $GITHUB_ENV
+          echo "Desplegando con tag: $TAG"
+
+      - name: Download Active Task Definition from ECS
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition ${{ secrets.ECS_TASK_DEFINITION }} \
+            --query taskDefinition > task-definition.json
+
+      - name: Update Container Image Tag in Task Definition
+        id: render-web
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: authentication
+          image: ${{ secrets.ECR_REGISTRY_HOST }}/${{ secrets.ECR_REPOSITORY_AUTH }}:${{ env.DEPLOY_TAG }}
+
+      - name: Deploy Rendered Task Definition to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render-web.outputs.task-definition }}
+          service: ${{ secrets.ECS_SERVICE_AUTH }}
+          cluster: ${{ secrets.ECS_CLUSTER }}
+          wait-for-service-stability: true

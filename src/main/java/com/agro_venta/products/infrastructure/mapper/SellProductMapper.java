@@ -9,25 +9,43 @@ import com.agro_venta.products.interfaces.rest.dto.SellResponse;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
 
 public class SellProductMapper {
 
-    public static SellProducEntity sellDtoToEntiy(SellDTO sellDTO){
-        SellProducEntity sellProducEntity = new SellProducEntity();
-        sellProducEntity.setSellerId(UUID.randomUUID());
-        sellProducEntity.setName(sellDTO.getName());
-        sellProducEntity.setDescription(sellDTO.getDescription());
-        sellProducEntity.setCategory(sellDTO.getCategory());
-        sellProducEntity.setQuantity(sellDTO.getQuantity());
-        sellProducEntity.setUnit(sellDTO.getUnit());
-        sellProducEntity.setUnitPrice(sellDTO.getUnitPrice());
-        sellProducEntity.setTotalPrice(
-                sellDTO.getUnitPrice().multiply(sellDTO.getQuantity()));
-        sellProducEntity.setOriginLocation(sellDTO.getOriginLocation());
-        sellProducEntity.setImageUrls(sellDTO.getImages());
-        sellProducEntity.setStatus(SellStatusEnum.EN_VENTA.toString());
-        return sellProducEntity;
+    private SellProductMapper() {}
+
+    public static SellProducEntity sellDtoToEntity(SellDTO sellDTO) {
+        SellProducEntity entity = new SellProducEntity();
+        // sellerId comes from the JWT via the DTO (NOT randomly generated)
+        entity.setSellerId(sellDTO.getSellerId());
+        entity.setName(sellDTO.getName());
+        entity.setDescription(sellDTO.getDescription());
+        entity.setCategory(sellDTO.getCategory());
+        entity.setQuantity(sellDTO.getQuantity());
+        entity.setReservedQuantity(java.math.BigDecimal.ZERO);
+        entity.setUnit(sellDTO.getUnit());
+        entity.setUnitPrice(sellDTO.getUnitPrice());
+        entity.setTotalPrice(sellDTO.getUnitPrice().multiply(sellDTO.getQuantity()));
+        entity.setMinShipmentQuantity(sellDTO.getMinShipmentQuantity() != null
+                ? sellDTO.getMinShipmentQuantity() : sellDTO.getQuantity());
+        entity.setOriginLocation(sellDTO.getOriginLocation());
+        entity.setDestinationCities(
+                sellDTO.getDestinationCities() != null
+                        ? sellDTO.getDestinationCities().toArray(new String[0])
+                        : new String[0]);
+        entity.setImageUrls(
+                sellDTO.getImages() != null
+                        ? sellDTO.getImages().toArray(new String[0])
+                        : new String[0]);
+        entity.setStatus(SellStatusEnum.EN_VENTA.toString());
+        entity.setHarvestDate(sellDTO.getHarvestDate());
+        return entity;
+    }
+
+    /** @deprecated use sellDtoToEntity instead */
+    @Deprecated
+    public static SellProducEntity sellDtoToEntiy(SellDTO sellDTO) {
+        return sellDtoToEntity(sellDTO);
     }
 
     public static SoldProduct sellEntityToDomain(SellProducEntity entity) {
@@ -42,13 +60,13 @@ public class SellProductMapper {
                 entity.getUnitPrice(),
                 entity.getTotalPrice(),
                 entity.getOriginLocation(),
-                entity.getImageUrls() == null ? Collections.emptyList() : entity.getImageUrls(),
+                arrayToList(entity.getImageUrls()),
                 "El producto se ha publicado exitosamente",
                 entity.getStatus()
         );
     }
 
-    public static SellDTO sellInputToDTO(SellRequest request, List<String> imageUrls){
+    public static SellDTO sellInputToDTO(SellRequest request, List<String> imageUrls) {
         return SellDTO.builder()
                 .name(request.name())
                 .description(request.description())
@@ -56,12 +74,15 @@ public class SellProductMapper {
                 .quantity(request.quantity())
                 .unit(request.unit())
                 .unitPrice(request.unitPrice())
+                .minShipmentQuantity(request.minShipmentQuantity())
                 .originLocation(request.originLocation())
+                .destinationCities(request.destinationCities())
                 .images(imageUrls)
+                .harvestDate(request.harvestDate())
                 .build();
     }
 
-    public static SellDTO sellInputToDTO(SellRequest request){
+    public static SellDTO sellInputToDTO(SellRequest request) {
         return sellInputToDTO(request, List.of());
     }
 
@@ -81,5 +102,10 @@ public class SellProductMapper {
                 soldProduct.message(),
                 soldProduct.status()
         );
+    }
+
+    private static List<String> arrayToList(String[] arr) {
+        if (arr == null) return Collections.emptyList();
+        return List.of(arr);
     }
 }
