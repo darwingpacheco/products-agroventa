@@ -42,11 +42,11 @@ public class PaymentController {
                         ? event.data().transaction().id() : "unknown");
 
         return webhookUseCase.process(event)
-                .then(Mono.just(ResponseEntity.<Void>ok().build()))
+                .then(Mono.just(ResponseEntity.ok().<Void>build()))
                 .onErrorResume(e -> {
                     log.error("Error processing Wompi webhook", e);
                     // Always return 200 to Wompi so they don't retry indefinitely
-                    return Mono.just(ResponseEntity.<Void>ok().build());
+                    return Mono.just(ResponseEntity.ok().<Void>build());
                 });
     }
 }
