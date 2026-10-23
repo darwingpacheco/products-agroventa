@@ -1,0 +1,49 @@
+name: 1. Continuous Integration (Build & Test)
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: products_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Run Tests & Verification
+        env:
+          SPRING_PROFILES_ACTIVE: test
+          R2DBC_URL: r2dbc:postgresql://localhost:5432/products_test
+          FLYWAY_JDBC_URL: jdbc:postgresql://localhost:5432/products_test
+          DB_USERNAME: postgres
+          DB_PASSWORD: postgres
+          JWT_SECRET: test-secret-at-least-32-characters-long
+          SQS_NOTIFICATIONS_QUEUE_URL: ""
+        run: mvn -B clean verify -Dspring.profiles.active=test
