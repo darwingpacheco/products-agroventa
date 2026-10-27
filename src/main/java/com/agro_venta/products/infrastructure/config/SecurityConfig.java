@@ -32,26 +32,27 @@ public class SecurityConfig {
                 .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
                 .addFilterAt(jwtFilter, SecurityWebFiltersOrder.AUTHENTICATION)
                 .authorizeExchange(exchanges -> exchanges
-                        // Public: catalogue browsing (no auth needed)
+                        // Actuator público (cubre peticiones directas o a través de rutas compuestas)
+                        .pathMatchers("**/actuator/**", "/actuator/**").permitAll()
+
+                        // Rutas públicas: catálogo y detalles de productos
                         .pathMatchers(HttpMethod.GET, "/api/agro-venta/v1/products/catalog").permitAll()
                         .pathMatchers(HttpMethod.GET, "/api/agro-venta/v1/products/{id}").permitAll()
-                        // Actuator
-                        .pathMatchers("/actuator/health", "/actuator/info").permitAll()
-                        // Sellers only
-                        .pathMatchers(HttpMethod.POST, "/api/agro-venta/v1/products/sell").hasRole("AGRICULTOR")
-                        .pathMatchers(HttpMethod.PUT,  "/api/agro-venta/v1/products/{id}").hasRole("AGRICULTOR")
-                        .pathMatchers(HttpMethod.PATCH,"/api/agro-venta/v1/products/{id}/status").hasRole("AGRICULTOR")
-                        .pathMatchers(HttpMethod.GET,  "/api/agro-venta/v1/products/my-products").hasRole("AGRICULTOR")
-                        .pathMatchers(HttpMethod.PATCH,"/api/agro-venta/v1/shipments/{productId}/dispatch").hasRole("AGRICULTOR")
-                        // Buyers only
-                        .pathMatchers(HttpMethod.POST, "/api/agro-venta/v1/orders").hasRole("COMPRADOR")
-                        // Both roles
-                        .pathMatchers(HttpMethod.GET,  "/api/agro-venta/v1/orders/my-orders").authenticated()
-                        .pathMatchers(HttpMethod.GET,  "/api/agro-venta/v1/orders/{id}").authenticated()
-                        // Payments
-                        .pathMatchers("/api/agro-venta/v1/payments/**").authenticated()
-                        // Wompi webhook is public (validated by signature internally)
+
+                        // Webhook de pasarela de pago público
                         .pathMatchers(HttpMethod.POST, "/api/agro-venta/v1/payments/webhook").permitAll()
+
+                        // 🟢 Cualquier usuario autenticado (AGRICULTOR o COMPRADOR) puede vender, comprar y gestionar
+                        .pathMatchers(HttpMethod.POST,  "/api/agro-venta/v1/products/sell").authenticated()
+                        .pathMatchers(HttpMethod.PUT,   "/api/agro-venta/v1/products/{id}").authenticated()
+                        .pathMatchers(HttpMethod.PATCH, "/api/agro-venta/v1/products/{id}/status").authenticated()
+                        .pathMatchers(HttpMethod.GET,   "/api/agro-venta/v1/products/my-products").authenticated()
+                        .pathMatchers(HttpMethod.PATCH, "/api/agro-venta/v1/shipments/{productId}/dispatch").authenticated()
+                        .pathMatchers(HttpMethod.POST,  "/api/agro-venta/v1/orders").authenticated()
+                        .pathMatchers(HttpMethod.GET,   "/api/agro-venta/v1/orders/my-orders").authenticated()
+                        .pathMatchers(HttpMethod.GET,   "/api/agro-venta/v1/orders/{id}").authenticated()
+                        .pathMatchers("/api/agro-venta/v1/payments/**").authenticated()
+
                         .anyExchange().authenticated())
                 .build();
     }
