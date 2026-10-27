@@ -8,12 +8,14 @@ import com.agro_venta.products.domain.port.EventPublisherPort;
 import com.agro_venta.products.domain.port.OrderQueryPort;
 import com.agro_venta.products.domain.port.ProductQueryPort;
 import com.agro_venta.products.domain.port.ShipmentPort;
+import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.UUID;
 
+@Service
 public class DispatchShipmentService implements DispatchShipmentUseCase {
 
     private final ProductQueryPort  productQueryPort;

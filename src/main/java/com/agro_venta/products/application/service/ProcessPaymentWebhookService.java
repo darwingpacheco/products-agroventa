@@ -7,6 +7,7 @@ import com.agro_venta.products.domain.model.Shipment;
 import com.agro_venta.products.domain.port.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
@@ -14,6 +15,7 @@ import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.UUID;
 
+@Service
 public class ProcessPaymentWebhookService implements ProcessPaymentWebhookUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(ProcessPaymentWebhookService.class);

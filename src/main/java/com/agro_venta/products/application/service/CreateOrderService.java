@@ -11,12 +11,14 @@ import com.agro_venta.products.domain.model.Order;
 import com.agro_venta.products.domain.model.Product;
 import com.agro_venta.products.domain.port.OrderQueryPort;
 import com.agro_venta.products.domain.port.ProductQueryPort;
+import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
+@Service
 public class CreateOrderService implements CreateOrderUseCase, GetCatalogUseCase {
 
     /**
