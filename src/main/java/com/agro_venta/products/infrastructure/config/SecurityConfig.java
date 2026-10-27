@@ -32,15 +32,15 @@ public class SecurityConfig {
                 .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
                 .addFilterAt(jwtFilter, SecurityWebFiltersOrder.AUTHENTICATION)
                 .authorizeExchange(exchanges -> exchanges
-                        // 🟢 Actuator en la raíz o bajo cualquier prefijo como /api/agro-venta/v1/products/actuator/...
-                        .pathMatchers("/actuator/**", "/**/actuator/**").permitAll()
+                        // 🟢 Actuator permitido tanto en la raíz como bajo el prefijo del API
+                        .pathMatchers("/actuator/**", "/api/agro-venta/v1/products/actuator/**").permitAll()
 
                         // Rutas públicas
                         .pathMatchers(HttpMethod.GET, "/api/agro-venta/v1/products/catalog").permitAll()
                         .pathMatchers(HttpMethod.GET, "/api/agro-venta/v1/products/{id}").permitAll()
                         .pathMatchers(HttpMethod.POST, "/api/agro-venta/v1/payments/webhook").permitAll()
 
-                        // Rutas autenticadas (disponibles para AGRICULTOR y COMPRADOR)
+                        // Rutas autenticadas (Permitidas para AGRICULTOR y COMPRADOR)
                         .pathMatchers(HttpMethod.POST,  "/api/agro-venta/v1/products/sell").authenticated()
                         .pathMatchers(HttpMethod.PUT,   "/api/agro-venta/v1/products/{id}").authenticated()
                         .pathMatchers(HttpMethod.PATCH, "/api/agro-venta/v1/products/{id}/status").authenticated()
