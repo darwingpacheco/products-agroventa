@@ -15,7 +15,7 @@ import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.UUID;
 
-@Service
+
 public class ProcessPaymentWebhookService implements ProcessPaymentWebhookUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(ProcessPaymentWebhookService.class);

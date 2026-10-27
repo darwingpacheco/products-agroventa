@@ -1,10 +1,13 @@
 package com.agro_venta.products.infrastructure.config;
 
+import com.agro_venta.products.application.dto.CatalogQuery;
 import com.agro_venta.products.application.service.*;
 import com.agro_venta.products.application.useCase.*;
+import com.agro_venta.products.domain.model.Product;
 import com.agro_venta.products.domain.port.*;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import reactor.core.publisher.Flux;
 
 @Configuration
 public class UseCaseConfig {
@@ -40,5 +43,12 @@ public class UseCaseConfig {
             EventPublisherPort eventPublisher) {
         return new DispatchShipmentService(
                 productQueryPort, shipmentPort, orderQueryPort, eventPublisher);
+    }
+
+    @Bean
+    public GetCatalogUseCase getCatalogUseCase(
+            ProductQueryPort productQueryPort
+    ){
+        return new ObtainCatalogService(productQueryPort);
     }
 }

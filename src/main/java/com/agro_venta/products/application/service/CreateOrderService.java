@@ -18,8 +18,8 @@ import reactor.core.publisher.Mono;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
-@Service
-public class CreateOrderService implements CreateOrderUseCase, GetCatalogUseCase {
+
+public class CreateOrderService implements CreateOrderUseCase {
 
     /**
      * Flat shipping rate per city (COP). In production this could be a table.
@@ -96,16 +96,5 @@ public class CreateOrderService implements CreateOrderUseCase, GetCatalogUseCase
                                     productQueryPort.reserveStock(product.id(), cmd.quantity())
                                             .thenReturn(savedOrder));
                 });
-    }
-
-    @Override
-    public Flux<Product> getCatalog(CatalogQuery catalogQuery) {
-        return productQueryPort.findCatalog(
-                        catalogQuery.category(),
-                        catalogQuery.destinationCity(),
-                        catalogQuery.page(),
-                        catalogQuery.size())
-                .switchIfEmpty(Mono.error(
-                        new ResourceNotFoundException("No hay productos")));
     }
 }

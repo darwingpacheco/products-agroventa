@@ -15,7 +15,7 @@ import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.UUID;
 
-@Service
+
 public class DispatchShipmentService implements DispatchShipmentUseCase {
 
     private final ProductQueryPort  productQueryPort;
