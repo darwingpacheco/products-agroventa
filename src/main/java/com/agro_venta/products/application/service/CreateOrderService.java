@@ -1,31 +1,39 @@
 package com.agro_venta.products.application.service;
 
+import com.agro_venta.products.application.dto.CatalogQuery;
 import com.agro_venta.products.application.dto.CreateOrderCommand;
 import com.agro_venta.products.application.useCase.CreateOrderUseCase;
+import com.agro_venta.products.application.useCase.GetCatalogUseCase;
 import com.agro_venta.products.domain.exception.BusinessException;
 import com.agro_venta.products.domain.exception.InsufficientStockException;
 import com.agro_venta.products.domain.exception.ResourceNotFoundException;
 import com.agro_venta.products.domain.model.Order;
+import com.agro_venta.products.domain.model.Product;
 import com.agro_venta.products.domain.port.OrderQueryPort;
 import com.agro_venta.products.domain.port.ProductQueryPort;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
-public class CreateOrderService implements CreateOrderUseCase {
+public class CreateOrderService implements CreateOrderUseCase, GetCatalogUseCase {
 
-    /** Flat shipping rate per city (COP). In production this could be a table. */
+    /**
+     * Flat shipping rate per city (COP). In production this could be a table.
+     */
     private static final BigDecimal SHIPPING_RATE = BigDecimal.valueOf(15_000);
-    /** Reservation TTL — 30 minutes */
+    /**
+     * Reservation TTL — 30 minutes
+     */
     private static final int RESERVATION_MINUTES = 30;
 
     private final ProductQueryPort productQueryPort;
-    private final OrderQueryPort   orderQueryPort;
+    private final OrderQueryPort orderQueryPort;
 
     public CreateOrderService(ProductQueryPort productQueryPort, OrderQueryPort orderQueryPort) {
         this.productQueryPort = productQueryPort;
-        this.orderQueryPort   = orderQueryPort;
+        this.orderQueryPort = orderQueryPort;
     }
 
     @Override
@@ -59,9 +67,9 @@ public class CreateOrderService implements CreateOrderUseCase {
                                 "Stock insuficiente. Disponible: " + available + " " + product.unit()));
                     }
 
-                    BigDecimal subtotal     = product.unitPrice().multiply(cmd.quantity());
+                    BigDecimal subtotal = product.unitPrice().multiply(cmd.quantity());
                     BigDecimal shippingCost = SHIPPING_RATE;
-                    BigDecimal total        = subtotal.add(shippingCost);
+                    BigDecimal total = subtotal.add(shippingCost);
 
                     Order newOrder = new Order(
                             null,
@@ -86,5 +94,16 @@ public class CreateOrderService implements CreateOrderUseCase {
                                     productQueryPort.reserveStock(product.id(), cmd.quantity())
                                             .thenReturn(savedOrder));
                 });
+    }
+
+    @Override
+    public Flux<Product> getCatalog(CatalogQuery catalogQuery) {
+        return productQueryPort.findCatalog(
+                        catalogQuery.category(),
+                        catalogQuery.destinationCity(),
+                        catalogQuery.page(),
+                        catalogQuery.size())
+                .switchIfEmpty(Mono.error(
+                        new ResourceNotFoundException("No hay productos")));
     }
 }

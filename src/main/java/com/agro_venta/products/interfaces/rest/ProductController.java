@@ -1,108 +1,91 @@
 package com.agro_venta.products.interfaces.rest;
 
-import com.agro_venta.products.application.dto.SellDTO;
+import com.agro_venta.products.application.useCase.GetCatalogUseCase;
 import com.agro_venta.products.application.useCase.SellUseCase;
 import com.agro_venta.products.infrastructure.mapper.SellProductMapper;
 import com.agro_venta.products.infrastructure.service.S3ImageStorageService;
+import com.agro_venta.products.interfaces.rest.dto.CatalogItemResponse;
+import com.agro_venta.products.application.dto.CatalogQuery;
 import com.agro_venta.products.interfaces.rest.dto.SellRequest;
 import com.agro_venta.products.interfaces.rest.dto.SellResponse;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.multipart.FilePart;
-import org.springframework.http.codec.multipart.FormFieldPart;
-import org.springframework.http.codec.multipart.Part;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.math.BigDecimal;
-import java.util.Arrays;
-import java.util.List;
 import java.util.UUID;
 
+/**
+ * Handles product listing operations (create, catalog).
+ * Renamed from AuthController to ProductController.
+ */
+@Validated
 @RestController
 @RequestMapping("/api/agro-venta/v1/products")
 public class ProductController {
 
-    private final SellUseCase sellUseCase;
-    private final S3ImageStorageService s3ImageStorageService;
+    private final SellUseCase            sellUseCase;
+    private final S3ImageStorageService  s3ImageStorageService;
+    private final GetCatalogUseCase getCatalogUseCase;
 
-    public ProductController(SellUseCase sellUseCase, S3ImageStorageService s3ImageStorageService) {
-        this.sellUseCase = sellUseCase;
+    public ProductController(SellUseCase sellUseCase, S3ImageStorageService s3ImageStorageService, GetCatalogUseCase getCatalogUseCase) {
+        this.sellUseCase           = sellUseCase;
         this.s3ImageStorageService = s3ImageStorageService;
+        this.getCatalogUseCase = getCatalogUseCase;
     }
 
+    /**
+     * Publish a product listing. Only AGRICULTOR role allowed (enforced by SecurityConfig).
+     * The sellerId is extracted from the JWT principal, never from the request body.
+     */
     @PostMapping(value = "/sell", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Mono<ResponseEntity<SellResponse>> sellProduct(
-            ServerWebExchange exchange,
+            @Valid @ModelAttribute SellRequest request,
+            @RequestPart(value = "images", required = false) Flux<FilePart> images,
             @AuthenticationPrincipal String userId) {
 
-        return exchange.getMultipartData().flatMap(multipartData -> {
-            // 1. Extraer archivos de imagen
-            List<Part> imageParts = multipartData.get("images");
-            Flux<FilePart> filePartFlux = Flux.empty();
-            if (imageParts != null) {
-                filePartFlux = Flux.fromIterable(imageParts)
-                        .filter(part -> part instanceof FilePart)
-                        .cast(FilePart.class);
-            }
+        Flux<FilePart> safeImages = images != null ? images : Flux.empty();
 
-            // 2. Extraer campos de texto enviados por Retrofit @Part
-            String name = getFormFieldValue(multipartData, "name");
-            String description = getFormFieldValue(multipartData, "description");
-            String category = getFormFieldValue(multipartData, "category");
-            String unit = getFormFieldValue(multipartData, "unit");
-            String originLocation = getFormFieldValue(multipartData, "originLocation");
-            String destinationCitiesRaw = getFormFieldValue(multipartData, "destinationCities");
-
-            BigDecimal quantity = parseBigDecimal(getFormFieldValue(multipartData, "quantity"));
-            BigDecimal unitPrice = parseBigDecimal(getFormFieldValue(multipartData, "unitPrice"));
-            BigDecimal minShipmentQuantity = parseBigDecimal(getFormFieldValue(multipartData, "minShipmentQuantity"));
-
-            List<String> destinationCities = destinationCitiesRaw != null
-                    ? Arrays.asList(destinationCitiesRaw.split(","))
-                    : List.of();
-
-            // 3. Subir imágenes a S3 y construir DTO
-            return s3ImageStorageService.uploadImages(filePartFlux)
-                    .flatMap(imageUrls -> {
-                        SellDTO sellDTO = SellDTO.builder()
-                                .sellerId(UUID.fromString(userId))
-                                .name(name)
-                                .description(description)
-                                .category(category)
-                                .quantity(quantity)
-                                .unit(unit)
-                                .unitPrice(unitPrice)
-                                .minShipmentQuantity(minShipmentQuantity)
-                                .originLocation(originLocation)
-                                .destinationCities(destinationCities)
-                                .images(imageUrls)
-                                .build();
-
-                        return sellUseCase.sellProduct(sellDTO);
-                    })
-                    .map(SellProductMapper::toSellResponse)
-                    .map(response -> ResponseEntity.status(HttpStatus.CREATED).body(response));
-        });
+        return s3ImageStorageService.uploadImages(safeImages)
+                .map(imageUrls -> {
+                    var dto = SellProductMapper.sellInputToDTO(request, imageUrls);
+                    // Inject sellerId from JWT
+                    return com.agro_venta.products.application.dto.SellDTO.builder()
+                            .sellerId(UUID.fromString(userId))
+                            .name(dto.getName())
+                            .description(dto.getDescription())
+                            .category(dto.getCategory())
+                            .quantity(dto.getQuantity())
+                            .unit(dto.getUnit())
+                            .unitPrice(dto.getUnitPrice())
+                            .minShipmentQuantity(dto.getMinShipmentQuantity())
+                            .originLocation(dto.getOriginLocation())
+                            .destinationCities(dto.getDestinationCities())
+                            .images(dto.getImages())
+                            .harvestDate(dto.getHarvestDate())
+                            .build();
+                })
+                .flatMap(sellUseCase::sellProduct)
+                .map(SellProductMapper::toSellResponse)
+                .map(body -> ResponseEntity.status(HttpStatus.CREATED).body(body));
     }
 
-    private String getFormFieldValue(org.springframework.util.MultiValueMap<String, Part> multipartData, String fieldName) {
-        List<Part> parts = multipartData.get(fieldName);
-        if (parts != null && !parts.isEmpty() && parts.get(0) instanceof FormFieldPart formField) {
-            return formField.value();
-        }
-        return null;
-    }
+    @GetMapping(value = "/catalog", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Flux<CatalogItemResponse> catalog(
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String destinationCity,
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "0")  int page,
+            @RequestParam(defaultValue = "20") int size) {
 
-    private BigDecimal parseBigDecimal(String value) {
-        try {
-            return value != null ? new BigDecimal(value) : BigDecimal.ZERO;
-        } catch (Exception e) {
-            return BigDecimal.ZERO;
-        }
+        return getCatalogUseCase
+                .getCatalog(new CatalogQuery(category, destinationCity, search, page, size))
+                .map(SellProductMapper::toCatalogResponse);
     }
 }

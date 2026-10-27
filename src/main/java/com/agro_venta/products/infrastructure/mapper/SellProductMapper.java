@@ -1,18 +1,22 @@
 package com.agro_venta.products.infrastructure.mapper;
 
 import com.agro_venta.products.application.dto.SellDTO;
+import com.agro_venta.products.domain.model.Product;
 import com.agro_venta.products.domain.model.SoldProduct;
 import com.agro_venta.products.domain.utils.enums.SellStatusEnum;
 import com.agro_venta.products.infrastructure.entity.SellProducEntity;
+import com.agro_venta.products.interfaces.rest.dto.CatalogItemResponse;
 import com.agro_venta.products.interfaces.rest.dto.SellRequest;
 import com.agro_venta.products.interfaces.rest.dto.SellResponse;
 
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 
 public class SellProductMapper {
 
-    private SellProductMapper() {}
+    private SellProductMapper() {
+    }
 
     public static SellProducEntity sellDtoToEntity(SellDTO sellDTO) {
         SellProducEntity entity = new SellProducEntity();
@@ -102,5 +106,36 @@ public class SellProductMapper {
     private static List<String> arrayToList(String[] arr) {
         if (arr == null) return Collections.emptyList();
         return List.of(arr);
+    }
+
+    public static CatalogItemResponse toCatalogResponse(Product product) {
+        return new CatalogItemResponse(
+                product.id(),
+                product.name(),
+                product.description(),
+                product.category(),
+                availableQuantity(product),
+                product.unit(),
+                product.unitPrice(),
+                product.minShipmentQuantity(),
+                product.originLocation(),
+                safe(product.destinationCities()),
+                safe(product.imageUrls()),
+                product.harvestDate(),
+                product.createdAt() != null ? product.createdAt().toInstant() : null
+        );
+    }
+
+    /**
+     * Lo que realmente se puede comprar: total menos lo reservado en órdenes. Nunca negativo.
+     */
+    private static BigDecimal availableQuantity(Product p) {
+        BigDecimal total = p.quantity() != null ? p.quantity() : BigDecimal.ZERO;
+        BigDecimal reserved = p.reservedQuantity() != null ? p.reservedQuantity() : BigDecimal.ZERO;
+        return total.subtract(reserved).max(BigDecimal.ZERO);
+    }
+
+    private static <T> List<T> safe(List<T> list) {
+        return list != null ? list : List.of();
     }
 }
