@@ -49,4 +49,26 @@ public class PaymentController {
                     return Mono.just(ResponseEntity.ok().<Void>build());
                 });
     }
+
+    /**
+     * App-side payment confirmation. Called by the Android app after the
+     * Wompi checkout redirect URL shows status=APPROVED. This is a fallback
+     * for when the Wompi webhook is not configured or hasn't arrived yet.
+     * Requires JWT — the caller must be the buyer of the order.
+     */
+    @PostMapping("/confirm/{orderId}")
+    public Mono<ResponseEntity<Void>> confirmPayment(
+            @PathVariable String orderId,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal
+                    String userId) {
+        log.info("App-side payment confirmation for order {} by user {}", orderId, userId);
+        return webhookUseCase.confirmPayment(
+                        java.util.UUID.fromString(orderId),
+                        java.util.UUID.fromString(userId))
+                .then(Mono.just(ResponseEntity.ok().<Void>build()))
+                .onErrorResume(e -> {
+                    log.error("Error confirming payment for order {}", orderId, e);
+                    return Mono.just(ResponseEntity.status(500).<Void>build());
+                });
+    }
 }

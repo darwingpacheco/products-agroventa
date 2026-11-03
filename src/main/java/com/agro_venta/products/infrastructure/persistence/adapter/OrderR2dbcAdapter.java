@@ -51,7 +51,17 @@ public class OrderR2dbcAdapter implements OrderQueryPort {
     @Override
     public Mono<Order> updateStatus(UUID orderId, String status) {
         return databaseClient.sql(
-                        "UPDATE orders SET status = :status, updated_at = NOW() WHERE id = :id")
+                        """
+                        UPDATE orders
+                        SET status = :status,
+                            payment_status = CASE
+                                WHEN :status = 'PAGADO' THEN 'PAGADO'
+                                WHEN :status = 'CANCELADO' THEN 'RECHAZADO'
+                                ELSE payment_status
+                            END,
+                            updated_at = NOW()
+                        WHERE id = :id
+                        """)
                 .bind("status", status)
                 .bind("id", orderId)
                 .fetch().rowsUpdated()

@@ -169,4 +169,42 @@ public class ProcessPaymentWebhookService implements ProcessPaymentWebhookUseCas
             default -> "PENDIENTE";
         };
     }
+
+    /**
+     * App-side payment confirmation. Called by the app after the Wompi
+     * checkout redirect shows APPROVED. Serves as a fallback when the
+     * Wompi webhook is not configured or hasn't arrived yet.
+     */
+    @Override
+    public Mono<Void> confirmPayment(UUID orderId, UUID buyerId) {
+        return orderQueryPort.findById(orderId)
+                .flatMap(order -> {
+                    // Security: only the buyer can confirm their own payment
+                    if (!order.buyerId().equals(buyerId)) {
+                        log.warn("Buyer {} tried to confirm payment for order owned by {}",
+                                buyerId, order.buyerId());
+                        return Mono.empty();
+                    }
+                    // Idempotency: only confirm if still pending
+                    if (!"PENDIENTE_PAGO".equals(order.status())) {
+                        log.info("Order {} already has status {}, skipping confirmation",
+                                orderId, order.status());
+                        return Mono.empty();
+                    }
+
+                    // Create a Payment record with a synthetic transaction ID
+                    // to prevent the webhook from double-processing later
+                    String syntheticTxId = "APP_CONFIRM_" + orderId;
+                    Payment payment = new Payment(
+                            null, orderId, "WOMPI", syntheticTxId,
+                            order.total(), "COP",
+                            "APROBADO", "APP_REDIRECT", null,
+                            OffsetDateTime.now());
+
+                    return paymentPort.save(payment)
+                            .flatMap(saved -> handleApprovedPayment(order, saved));
+                })
+                .doOnError(e -> log.error("Error confirming payment for order {}", orderId, e))
+                .onErrorResume(e -> Mono.empty());
+    }
 }
