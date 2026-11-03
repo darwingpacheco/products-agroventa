@@ -8,6 +8,7 @@ import java.util.UUID;
 
 public record CatalogItemResponse(
         UUID id,
+        UUID sellerId,
         String name,
         String description,
         String category,

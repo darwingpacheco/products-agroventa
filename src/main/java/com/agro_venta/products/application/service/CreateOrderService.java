@@ -69,6 +69,16 @@ public class CreateOrderService implements CreateOrderUseCase {
                                 "Stock insuficiente. Disponible: " + available + " " + product.unit()));
                     }
 
+                    // Validate minimum shipment quantity
+                    if (product.minShipmentQuantity() != null
+                            && product.minShipmentQuantity().compareTo(BigDecimal.ZERO) > 0
+                            && cmd.quantity().compareTo(product.minShipmentQuantity()) < 0) {
+                        return Mono.error(new BusinessException(
+                                "La cantidad solicitada (" + cmd.quantity() + " " + product.unit()
+                                + ") es menor al mínimo de despacho ("
+                                + product.minShipmentQuantity() + " " + product.unit() + ")"));
+                    }
+
                     BigDecimal subtotal = product.unitPrice().multiply(cmd.quantity());
                     BigDecimal shippingCost = SHIPPING_RATE;
                     BigDecimal total = subtotal.add(shippingCost);

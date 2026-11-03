@@ -17,10 +17,12 @@ public interface SellProductR2dbRepository extends ReactiveCrudRepository<SellPr
             WHERE status = 'EN_VENTA'
               AND (:category IS NULL OR category ILIKE :category)
               AND (:destinationCity IS NULL OR :destinationCity = ANY(destination_cities))
+              AND (:search IS NULL OR name ILIKE '%' || :search || '%')
+              AND (quantity - COALESCE(reserved_quantity, 0)) > 0
             ORDER BY created_at DESC
             LIMIT :size OFFSET :offset
             """)
-    Flux<SellProducEntity> findCatalog(String category, String destinationCity, int size, long offset);
+    Flux<SellProducEntity> findCatalog(String category, String destinationCity, String search, int size, long offset);
 
     Flux<SellProducEntity> findBySellerId(UUID sellerId);
 

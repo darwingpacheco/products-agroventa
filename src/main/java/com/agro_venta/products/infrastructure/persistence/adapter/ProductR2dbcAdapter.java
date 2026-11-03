@@ -30,9 +30,9 @@ public class ProductR2dbcAdapter implements ProductQueryPort {
     }
 
     @Override
-    public Flux<Product> findCatalog(String category, String destinationCity, int page, int size) {
+    public Flux<Product> findCatalog(String category, String destinationCity, String search, int page, int size) {
         long offset = (long) page * size;
-        return repository.findCatalog(category, destinationCity, size, offset)
+        return repository.findCatalog(category, destinationCity, search, size, offset)
                 .map(this::toDomain);
     }
 

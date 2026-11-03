@@ -111,6 +111,7 @@ public class SellProductMapper {
     public static CatalogItemResponse toCatalogResponse(Product product) {
         return new CatalogItemResponse(
                 product.id(),
+                product.sellerId(),
                 product.name(),
                 product.description(),
                 product.category(),

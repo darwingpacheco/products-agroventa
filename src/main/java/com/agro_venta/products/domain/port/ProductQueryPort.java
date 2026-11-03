@@ -10,7 +10,7 @@ public interface ProductQueryPort {
 
     Mono<Product> findById(UUID id);
 
-    Flux<Product> findCatalog(String category, String destinationCity, int page, int size);
+    Flux<Product> findCatalog(String category, String destinationCity, String search, int page, int size);
 
     Flux<Product> findBySellerId(UUID sellerId);
 
