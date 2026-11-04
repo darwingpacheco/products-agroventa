@@ -190,24 +190,39 @@ public class ProcessPaymentWebhookService implements ProcessPaymentWebhookUseCas
                                 buyerId, order.buyerId());
                         return Mono.empty();
                     }
-                    // Idempotency: only confirm if still pending
+                    // Idempotency: if already paid, nothing to do — return success silently
+                    if ("PAGADO".equals(order.status())) {
+                        log.info("Order {} already PAGADO, skipping confirmation", orderId);
+                        return Mono.empty();
+                    }
+                    // Only confirm if still pending
                     if (!"PENDIENTE_PAGO".equals(order.status())) {
-                        log.info("Order {} already has status {}, skipping confirmation",
+                        log.info("Order {} has status {}, skipping confirmation",
                                 orderId, order.status());
                         return Mono.empty();
                     }
 
-                    // Create a Payment record with a synthetic transaction ID
-                    // to prevent the webhook from double-processing later
                     String syntheticTxId = "APP_CONFIRM_" + orderId;
-                    Payment payment = new Payment(
-                            null, orderId, "WOMPI", syntheticTxId,
-                            order.total(), "COP",
-                            "APROBADO", "APP_REDIRECT", null,
-                            OffsetDateTime.now());
 
-                    return paymentPort.save(payment)
-                            .flatMap(saved -> handleApprovedPayment(order, saved));
+                    // Check if we already created a payment record for this order
+                    return paymentPort.findByProviderTransactionId(syntheticTxId)
+                            .flatMap(existingPayment -> {
+                                // Payment record already exists but order not yet updated —
+                                // just update the order status directly
+                                log.info("Payment record already exists for order {}, updating status only", orderId);
+                                return handleApprovedPayment(order, existingPayment);
+                            })
+                            .switchIfEmpty(Mono.defer(() -> {
+                                // First time confirming — create payment record then update order
+                                Payment payment = new Payment(
+                                        null, orderId, "WOMPI", syntheticTxId,
+                                        order.total(), "COP",
+                                        "APROBADO", "APP_REDIRECT", null,
+                                        OffsetDateTime.now());
+
+                                return paymentPort.save(payment)
+                                        .flatMap(saved -> handleApprovedPayment(order, saved));
+                            }));
                 })
                 .doOnError(e -> log.error("Error confirming payment for order {}", orderId, e))
                 .onErrorResume(e -> Mono.empty());

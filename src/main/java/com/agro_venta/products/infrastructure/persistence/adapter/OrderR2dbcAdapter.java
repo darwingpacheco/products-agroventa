@@ -55,7 +55,7 @@ public class OrderR2dbcAdapter implements OrderQueryPort {
                         UPDATE orders
                         SET status = :status,
                             payment_status = CASE
-                                WHEN :status = 'PAGADO' THEN 'PAGADO'
+                                WHEN :status = 'PAGADO' THEN 'APROBADO'
                                 WHEN :status = 'CANCELADO' THEN 'RECHAZADO'
                                 ELSE payment_status
                             END,
