@@ -49,6 +49,7 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.POST,  "/api/agro-venta/v1/orders").authenticated()
                         .pathMatchers(HttpMethod.GET,   "/api/agro-venta/v1/orders/my-orders").authenticated()
                         .pathMatchers(HttpMethod.GET,   "/api/agro-venta/v1/orders/{id}").authenticated()
+                        .pathMatchers(HttpMethod.POST,  "/api/agro-venta/v1/orders/{id}/cancel").authenticated()
                         .pathMatchers("/api/agro-venta/v1/payments/**").authenticated()
 
                         .anyExchange().authenticated())
