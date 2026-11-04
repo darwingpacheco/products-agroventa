@@ -60,7 +60,12 @@ public class ProcessPaymentWebhookService implements ProcessPaymentWebhookUseCas
     private Mono<Void> processNewTransaction(WompiWebhookEvent.Transaction tx) {
         UUID orderId;
         try {
-            orderId = UUID.fromString(tx.reference());
+            // Reference format: <orderId> OR <orderId>_<timestamp> (retry attempts)
+            String ref = tx.reference();
+            if (ref != null && ref.contains("_")) {
+                ref = ref.substring(0, ref.lastIndexOf("_"));
+            }
+            orderId = UUID.fromString(ref);
         } catch (IllegalArgumentException e) {
             log.warn("Invalid orderId in Wompi reference: {}", tx.reference());
             return Mono.empty();
