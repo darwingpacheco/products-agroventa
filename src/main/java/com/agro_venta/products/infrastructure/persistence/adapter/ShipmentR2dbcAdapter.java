@@ -36,6 +36,28 @@ public class ShipmentR2dbcAdapter implements ShipmentPort {
 
     @Override
     public Mono<Shipment> save(Shipment shipment) {
+        if (shipment.id() != null) {
+            // UPDATE: only touch specific columns, preserve created_at
+            return databaseClient.sql("""
+                    UPDATE shipments
+                    SET total_quantity = :qty,
+                        min_quantity_threshold = :threshold,
+                        status = :status,
+                        ready_at = :readyAt,
+                        dispatched_at = :dispatchedAt,
+                        updated_at = NOW()
+                    WHERE id = :id
+                    """)
+                    .bind("qty", shipment.totalQuantity())
+                    .bind("threshold", shipment.minQuantityThreshold())
+                    .bind("status", shipment.status())
+                    .bind("readyAt", shipment.readyAt())
+                    .bind("dispatchedAt", shipment.dispatchedAt())
+                    .bind("id", shipment.id())
+                    .fetch().rowsUpdated()
+                    .then(repository.findById(shipment.id()).map(this::toDomain));
+        }
+        // INSERT: let DB defaults handle created_at / updated_at
         return repository.save(toEntity(shipment)).map(this::toDomain);
     }
 
