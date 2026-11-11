@@ -80,7 +80,8 @@ public class ProductR2dbcAdapter implements ProductQueryPort {
                 e.getStatus(),
                 e.getHarvestDate(),
                 e.getCreatedAt(),
-                e.getUpdatedAt()
+                e.getUpdatedAt(),
+                e.getShippingPrice() != null ? e.getShippingPrice() : BigDecimal.valueOf(15000)
         );
     }
 
@@ -104,6 +105,7 @@ public class ProductR2dbcAdapter implements ProductQueryPort {
                         ? p.imageUrls().toArray(new String[0]) : new String[0])
                 .status(p.status())
                 .harvestDate(p.harvestDate())
+                .shippingPrice(p.shippingPrice() != null ? p.shippingPrice() : BigDecimal.valueOf(15000))
                 .build();
     }
 

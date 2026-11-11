@@ -23,4 +23,5 @@ public class SellDTO {
     List<String> destinationCities;
     List<String> images;
     LocalDate    harvestDate;
+    BigDecimal   shippingPrice;
 }

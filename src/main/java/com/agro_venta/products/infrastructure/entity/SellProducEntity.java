@@ -72,4 +72,7 @@ public class SellProducEntity {
 
     @Column("updated_at")
     private OffsetDateTime updatedAt;
+
+    @Column("shipping_price")
+    private BigDecimal shippingPrice;
 }

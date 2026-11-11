@@ -45,26 +45,46 @@ public class DispatchShipmentService implements DispatchShipmentUseCase {
                         return Mono.error(new BusinessException(
                                 "No tienes permiso para despachar este producto"));
                     }
-                    return shipmentPort.findActiveByProductId(productId)
-                            .switchIfEmpty(Mono.error(
-                                    new BusinessException("No hay carga acumulada para este producto")));
+                    // Calculate accumulated quantity directly from PAGADO orders
+                    // (don't rely on shipment record which may not have been updated)
+                    return orderQueryPort.findPaidOrdersByProductId(productId)
+                            .collectList()
+                            .flatMap(paidOrders -> {
+                                if (paidOrders.isEmpty()) {
+                                    return Mono.error(new BusinessException(
+                                            "No hay pedidos pagados para despachar"));
+                                }
+                                java.math.BigDecimal accumulated = java.math.BigDecimal.ZERO;
+                                for (var o : paidOrders) {
+                                    accumulated = accumulated.add(o.quantity());
+                                }
+                                java.math.BigDecimal threshold = product.minShipmentQuantity();
+                                if (accumulated.compareTo(threshold) < 0) {
+                                    return Mono.error(new BusinessException(
+                                            "La carga acumulada (" + accumulated
+                                            + ") no alcanza el mínimo (" + threshold + ")"));
+                                }
+                                // Find or create shipment record
+                                return shipmentPort.findActiveByProductId(productId)
+                                        .switchIfEmpty(Mono.defer(() -> {
+                                            Shipment s = new Shipment(
+                                                    null, product.id(), accumulated,
+                                                    threshold, "LISTO_PARA_DESPACHAR",
+                                                    null, null);
+                                            return shipmentPort.save(s);
+                                        }))
+                                        .flatMap(shipment -> {
+                                            Shipment dispatched = new Shipment(
+                                                    shipment.id(), shipment.productId(),
+                                                    accumulated, threshold,
+                                                    "DESPACHADO",
+                                                    shipment.readyAt(),
+                                                    OffsetDateTime.now());
+                                            return shipmentPort.save(dispatched);
+                                        });
+                            });
                 })
-                .flatMap(shipment -> {
-                    if (!"LISTO_PARA_DESPACHAR".equals(shipment.status())) {
-                        return Mono.error(new BusinessException(
-                                "La carga aún no alcanza el mínimo requerido para despachar. " +
-                                "Acumulado: " + shipment.totalQuantity() +
-                                " / Mínimo: " + shipment.minQuantityThreshold()));
-                    }
-
-                    Shipment dispatched = new Shipment(
-                            shipment.id(), shipment.productId(),
-                            shipment.totalQuantity(), shipment.minQuantityThreshold(),
-                            "DESPACHADO", shipment.readyAt(), OffsetDateTime.now());
-
-                    return shipmentPort.save(dispatched);
-                })
-                // Update all paid orders in this shipment to DESPACHADO
+                // Update all paid orders for this product to DESPACHADO
                 .flatMap(dispatched ->
                         orderQueryPort.findPaidOrdersByProductId(productId)
                                 .flatMap(order -> orderQueryPort.updateStatus(order.id(), "DESPACHADO")
@@ -74,8 +94,7 @@ public class DispatchShipmentService implements DispatchShipmentUseCase {
                                                 Map.of(
                                                         "orderId", order.id().toString(),
                                                         "buyerId", order.buyerId().toString()
-                                                )))
-                                )
+                                                ))))
                                 .then(Mono.just(dispatched)));
     }
 }

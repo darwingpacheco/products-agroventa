@@ -24,5 +24,6 @@ public record Product(
         String         status,
         LocalDate      harvestDate,
         OffsetDateTime createdAt,
-        OffsetDateTime updatedAt
+        OffsetDateTime updatedAt,
+        BigDecimal     shippingPrice
 ) {}

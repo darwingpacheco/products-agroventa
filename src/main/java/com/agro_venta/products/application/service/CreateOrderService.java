@@ -24,7 +24,7 @@ public class CreateOrderService implements CreateOrderUseCase {
     /**
      * Flat shipping rate per city (COP). In production this could be a table.
      */
-    private static final BigDecimal SHIPPING_RATE = BigDecimal.valueOf(15_000);
+    private static final BigDecimal DEFAULT_SHIPPING_RATE = BigDecimal.valueOf(15_000);
     /**
      * Reservation TTL — 30 minutes
      */
@@ -80,7 +80,9 @@ public class CreateOrderService implements CreateOrderUseCase {
                     }
 
                     BigDecimal subtotal = product.unitPrice().multiply(cmd.quantity());
-                    BigDecimal shippingCost = SHIPPING_RATE;
+                    // Use the product's shipping price (or default 15000)
+                    BigDecimal shippingCost = product.shippingPrice() != null
+                            ? product.shippingPrice() : DEFAULT_SHIPPING_RATE;
                     BigDecimal total = subtotal.add(shippingCost);
 
                     Order newOrder = new Order(

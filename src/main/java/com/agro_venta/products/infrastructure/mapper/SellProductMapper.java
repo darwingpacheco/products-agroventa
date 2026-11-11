@@ -43,6 +43,9 @@ public class SellProductMapper {
                         : new String[0]);
 
         entity.setStatus(SellStatusEnum.EN_VENTA.toString());
+        entity.setShippingPrice(sellDTO.getShippingPrice() != null
+                ? sellDTO.getShippingPrice()
+                : BigDecimal.valueOf(15000));
         entity.setHarvestDate(sellDTO.getHarvestDate());
         return entity;
     }
@@ -78,6 +81,9 @@ public class SellProductMapper {
                 .destinationCities(request.destinationCities())
                 .images(imageUrls)
                 .harvestDate(request.harvestDate())
+                .shippingPrice(request.shippingPrice() != null
+                        ? request.shippingPrice()
+                        : java.math.BigDecimal.valueOf(15000))
                 .build();
     }
 
@@ -123,7 +129,8 @@ public class SellProductMapper {
                 safe(product.destinationCities()),
                 safe(product.imageUrls()),
                 product.harvestDate(),
-                product.createdAt() != null ? product.createdAt().toInstant() : null
+                product.createdAt() != null ? product.createdAt().toInstant() : null,
+                product.shippingPrice() != null ? product.shippingPrice() : java.math.BigDecimal.valueOf(15000)
         );
     }
 

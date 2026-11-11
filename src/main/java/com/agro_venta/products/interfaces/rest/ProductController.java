@@ -69,6 +69,9 @@ public class ProductController {
                             .destinationCities(dto.getDestinationCities())
                             .images(dto.getImages())
                             .harvestDate(dto.getHarvestDate())
+                            .shippingPrice(dto.getShippingPrice() != null
+                                    ? dto.getShippingPrice()
+                                    : java.math.BigDecimal.valueOf(15000))
                             .build();
                 })
                 .flatMap(sellUseCase::sellProduct)

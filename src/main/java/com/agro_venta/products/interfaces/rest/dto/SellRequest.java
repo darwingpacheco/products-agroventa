@@ -39,5 +39,7 @@ public record SellRequest(
         @Size(max = 6)
         List<String> destinationCities,
 
-        LocalDate harvestDate
+        LocalDate harvestDate,
+
+        BigDecimal shippingPrice
 ) {}

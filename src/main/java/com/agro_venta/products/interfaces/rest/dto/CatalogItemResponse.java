@@ -20,5 +20,6 @@ public record CatalogItemResponse(
         List<String> destinationCities,
         List<String> imageUrls,
         LocalDate harvestDate,
-        Instant createdAt
+        Instant createdAt,
+        BigDecimal shippingPrice
 ) {}
