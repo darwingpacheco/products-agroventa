@@ -54,11 +54,12 @@ public class DispatchShipmentService implements DispatchShipmentUseCase {
                                     return Mono.error(new BusinessException(
                                             "No hay pedidos pagados para despachar"));
                                 }
-                                java.math.BigDecimal accumulated = java.math.BigDecimal.ZERO;
+                                java.math.BigDecimal sum = java.math.BigDecimal.ZERO;
                                 for (var o : paidOrders) {
-                                    accumulated = accumulated.add(o.quantity());
+                                    sum = sum.add(o.quantity());
                                 }
-                                java.math.BigDecimal threshold = product.minShipmentQuantity();
+                                final java.math.BigDecimal accumulated = sum;
+                                final java.math.BigDecimal threshold = product.minShipmentQuantity();
                                 if (accumulated.compareTo(threshold) < 0) {
                                     return Mono.error(new BusinessException(
                                             "La carga acumulada (" + accumulated
