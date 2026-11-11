@@ -48,6 +48,7 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.PATCH, "/api/agro-venta/v1/shipments/{productId}/dispatch").authenticated()
                         .pathMatchers(HttpMethod.POST,  "/api/agro-venta/v1/orders").authenticated()
                         .pathMatchers(HttpMethod.GET,   "/api/agro-venta/v1/orders/my-orders").authenticated()
+                        .pathMatchers(HttpMethod.GET,   "/api/agro-venta/v1/orders/my-sales").authenticated()
                         .pathMatchers(HttpMethod.GET,   "/api/agro-venta/v1/orders/{id}").authenticated()
                         .pathMatchers(HttpMethod.POST,  "/api/agro-venta/v1/orders/{id}/cancel").authenticated()
                         .pathMatchers("/api/agro-venta/v1/payments/**").authenticated()

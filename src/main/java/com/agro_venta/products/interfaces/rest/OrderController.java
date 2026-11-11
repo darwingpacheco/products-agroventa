@@ -66,13 +66,25 @@ public class OrderController {
                 .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()));
     }
 
-    /** Get current user's orders (as buyer or seller). */
+    /** Get current user's orders (as buyer). */
     @GetMapping("/my-orders")
     public Flux<OrderResponse> getMyOrders(
             @AuthenticationPrincipal String userId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return orderQueryPort.findByBuyerId(UUID.fromString(userId), page, size)
+                .map(OrderResponse::fromDomain);
+    }
+
+    /**
+     * Get orders received as seller (AGRICULTOR).
+     * Returns all orders where the authenticated user is the seller.
+     */
+    @GetMapping("/my-sales")
+    public Flux<OrderResponse> getMySales(
+            @AuthenticationPrincipal String userId,
+            @RequestParam(defaultValue = "PAGADO") String status) {
+        return orderQueryPort.findBySellerIdAndStatus(UUID.fromString(userId), status)
                 .map(OrderResponse::fromDomain);
     }
 
