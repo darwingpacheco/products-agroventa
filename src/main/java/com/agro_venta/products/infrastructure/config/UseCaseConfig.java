@@ -39,10 +39,9 @@ public class UseCaseConfig {
             ProductQueryPort productQueryPort,
             ShipmentPort shipmentPort,
             OrderQueryPort orderQueryPort,
-            EventPublisherPort eventPublisher,
-            AuthServiceClient authServiceClient) {
+            EventPublisherPort eventPublisher) {
         return new DispatchShipmentService(
-                productQueryPort, shipmentPort, orderQueryPort, eventPublisher, authServiceClient);
+                productQueryPort, shipmentPort, orderQueryPort, eventPublisher);
     }
 
     @Bean
