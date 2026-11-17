@@ -78,13 +78,12 @@ public class OrderController {
 
     /**
      * Get orders received as seller (AGRICULTOR).
-     * Returns all orders where the authenticated user is the seller.
+     * Returns ALL non-cancelled orders where the authenticated user is the seller.
      */
     @GetMapping("/my-sales")
     public Flux<OrderResponse> getMySales(
-            @AuthenticationPrincipal String userId,
-            @RequestParam(defaultValue = "PAGADO") String status) {
-        return orderQueryPort.findBySellerIdAndStatus(UUID.fromString(userId), status)
+            @AuthenticationPrincipal String userId) {
+        return orderQueryPort.findAllBySellerId(UUID.fromString(userId))
                 .map(OrderResponse::fromDomain);
     }
 
