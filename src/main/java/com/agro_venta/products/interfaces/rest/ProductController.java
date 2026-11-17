@@ -32,12 +32,17 @@ public class ProductController {
 
     private final SellUseCase            sellUseCase;
     private final S3ImageStorageService  s3ImageStorageService;
-    private final GetCatalogUseCase getCatalogUseCase;
+    private final GetCatalogUseCase      getCatalogUseCase;
+    private final com.agro_venta.products.domain.port.ProductQueryPort productQueryPort;
 
-    public ProductController(SellUseCase sellUseCase, S3ImageStorageService s3ImageStorageService, GetCatalogUseCase getCatalogUseCase) {
+    public ProductController(SellUseCase sellUseCase,
+                              S3ImageStorageService s3ImageStorageService,
+                              GetCatalogUseCase getCatalogUseCase,
+                              com.agro_venta.products.domain.port.ProductQueryPort productQueryPort) {
         this.sellUseCase           = sellUseCase;
         this.s3ImageStorageService = s3ImageStorageService;
-        this.getCatalogUseCase = getCatalogUseCase;
+        this.getCatalogUseCase     = getCatalogUseCase;
+        this.productQueryPort      = productQueryPort;
     }
 
     /**
@@ -90,5 +95,14 @@ public class ProductController {
         return getCatalogUseCase
                 .getCatalog(new CatalogQuery(category, destinationCity, search, page, size))
                 .map(SellProductMapper::toCatalogResponse);
+    }
+
+    /** Get a single product by ID — public, no auth required */
+    @GetMapping(value = "/{productId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<ResponseEntity<CatalogItemResponse>> getProduct(
+            @PathVariable java.util.UUID productId) {
+        return productQueryPort.findById(productId)
+                .map(p -> ResponseEntity.ok(SellProductMapper.toCatalogResponse(p)))
+                .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()));
     }
 }
