@@ -114,12 +114,33 @@ public class OrderController {
                                     productQueryPort.releaseStock(order.productId(), order.quantity())
                                             .thenReturn(updated));
                 })
+                .map(order -> ResponseEntity.ok(OrderResponse.fromDomain(order)));
+    }
+
+    /**
+     * Mark a dispatched order as delivered (ENTREGADO).
+     * Only the buyer or seller of the order can confirm delivery.
+     */
+    @PostMapping("/{id}/deliver")
+    public Mono<ResponseEntity<OrderResponse>> deliverOrder(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal String userId) {
+        return orderQueryPort.findById(id)
+                .filter(order -> order.buyerId().toString().equals(userId)
+                        || order.sellerId().toString().equals(userId))
+                .switchIfEmpty(Mono.error(new BusinessException(
+                        "Pedido no encontrado o no tienes permiso")))
+                .flatMap(order -> {
+                    if (!"DESPACHADO".equals(order.status())) {
+                        return Mono.<com.agro_venta.products.domain.model.Order>error(
+                                new BusinessException("Solo se pueden marcar como entregados los pedidos despachados"));
+                    }
+                    return orderQueryPort.updateStatus(order.id(), "ENTREGADO");
+                })
                 .map(order -> ResponseEntity.ok(OrderResponse.fromDomain(order)))
                 .onErrorResume(e -> {
                     if (e instanceof BusinessException) {
-                        return Mono.just(ResponseEntity
-                                .badRequest()
-                                .build());
+                        return Mono.just(ResponseEntity.badRequest().build());
                     }
                     return Mono.just(ResponseEntity.notFound().build());
                 });
