@@ -1,7 +1,6 @@
 package com.agro_venta.products.application.service;
 
 import com.agro_venta.products.application.useCase.DispatchShipmentUseCase;
-import com.agro_venta.products.infrastructure.client.AuthServiceClient;
 import com.agro_venta.products.domain.exception.BusinessException;
 import com.agro_venta.products.domain.exception.ResourceNotFoundException;
 import com.agro_venta.products.domain.model.Shipment;
@@ -21,19 +20,16 @@ public class DispatchShipmentService implements DispatchShipmentUseCase {
     private final ShipmentPort       shipmentPort;
     private final OrderQueryPort     orderQueryPort;
     private final EventPublisherPort eventPublisher;
-    private final AuthServiceClient  authServiceClient;
 
     public DispatchShipmentService(
             ProductQueryPort productQueryPort,
             ShipmentPort shipmentPort,
             OrderQueryPort orderQueryPort,
-            EventPublisherPort eventPublisher,
-            AuthServiceClient authServiceClient) {
+            EventPublisherPort eventPublisher) {
         this.productQueryPort  = productQueryPort;
         this.shipmentPort      = shipmentPort;
         this.orderQueryPort    = orderQueryPort;
         this.eventPublisher    = eventPublisher;
-        this.authServiceClient = authServiceClient;
     }
 
     @Override
@@ -88,30 +84,18 @@ public class DispatchShipmentService implements DispatchShipmentUseCase {
                             });
                 })
                 // Update all paid orders for this product to DESPACHADO
+                // Notifications are best-effort — never block the dispatch
                 .flatMap(dispatched ->
                         orderQueryPort.findPaidOrdersByProductId(productId)
                                 .flatMap(order -> orderQueryPort.updateStatus(order.id(), "DESPACHADO")
-                                        .flatMap(updated ->
-                                                authServiceClient.getUserInfo(order.buyerId())
-                                                        .flatMap(buyerInfo -> eventPublisher.publish(
-                                                                "notifications",
-                                                                "ORDER_DISPATCHED",
-                                                                Map.of(
-                                                                        "orderId",   order.id().toString(),
-                                                                        "buyerId",   order.buyerId().toString(),
-                                                                        "toEmail",   buyerInfo.email() != null ? buyerInfo.email() : "",
-                                                                        "firstName", buyerInfo.fullName().trim()
-                                                                )))
-                                                        .switchIfEmpty(eventPublisher.publish(
-                                                                "notifications",
-                                                                "ORDER_DISPATCHED",
-                                                                Map.of(
-                                                                        "orderId", order.id().toString(),
-                                                                        "buyerId", order.buyerId().toString()
-                                                                )))
-                                                        .onErrorResume(e -> {
-                                                            return Mono.empty();
-                                                        })))
+                                        .flatMap(updated -> eventPublisher.publish(
+                                                "notifications",
+                                                "ORDER_DISPATCHED",
+                                                Map.of(
+                                                        "orderId", order.id().toString(),
+                                                        "buyerId", order.buyerId().toString()
+                                                ))
+                                                .onErrorResume(e -> Mono.empty())))
                                 .then(Mono.just(dispatched)));
     }
 }
