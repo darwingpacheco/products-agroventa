@@ -1,6 +1,7 @@
 package com.agro_venta.products.application.service;
 
 import com.agro_venta.products.application.useCase.DispatchShipmentUseCase;
+import com.agro_venta.products.infrastructure.client.AuthServiceClient;
 import com.agro_venta.products.domain.exception.BusinessException;
 import com.agro_venta.products.domain.exception.ResourceNotFoundException;
 import com.agro_venta.products.domain.model.Shipment;
@@ -15,23 +16,26 @@ import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.UUID;
 
-
+@Service
 public class DispatchShipmentService implements DispatchShipmentUseCase {
 
-    private final ProductQueryPort  productQueryPort;
-    private final ShipmentPort      shipmentPort;
-    private final OrderQueryPort    orderQueryPort;
+    private final ProductQueryPort   productQueryPort;
+    private final ShipmentPort       shipmentPort;
+    private final OrderQueryPort     orderQueryPort;
     private final EventPublisherPort eventPublisher;
+    private final AuthServiceClient  authServiceClient;
 
     public DispatchShipmentService(
             ProductQueryPort productQueryPort,
             ShipmentPort shipmentPort,
             OrderQueryPort orderQueryPort,
-            EventPublisherPort eventPublisher) {
-        this.productQueryPort = productQueryPort;
-        this.shipmentPort     = shipmentPort;
-        this.orderQueryPort   = orderQueryPort;
-        this.eventPublisher   = eventPublisher;
+            EventPublisherPort eventPublisher,
+            AuthServiceClient authServiceClient) {
+        this.productQueryPort  = productQueryPort;
+        this.shipmentPort      = shipmentPort;
+        this.orderQueryPort    = orderQueryPort;
+        this.eventPublisher    = eventPublisher;
+        this.authServiceClient = authServiceClient;
     }
 
     @Override
@@ -89,13 +93,24 @@ public class DispatchShipmentService implements DispatchShipmentUseCase {
                 .flatMap(dispatched ->
                         orderQueryPort.findPaidOrdersByProductId(productId)
                                 .flatMap(order -> orderQueryPort.updateStatus(order.id(), "DESPACHADO")
-                                        .flatMap(updated -> eventPublisher.publish(
-                                                "notifications",
-                                                "ORDER_DISPATCHED",
-                                                Map.of(
-                                                        "orderId", order.id().toString(),
-                                                        "buyerId", order.buyerId().toString()
-                                                ))))
+                                        .flatMap(updated ->
+                                                authServiceClient.getUserInfo(order.buyerId())
+                                                        .flatMap(buyerInfo -> eventPublisher.publish(
+                                                                "notifications",
+                                                                "ORDER_DISPATCHED",
+                                                                Map.of(
+                                                                        "orderId",   order.id().toString(),
+                                                                        "buyerId",   order.buyerId().toString(),
+                                                                        "toEmail",   buyerInfo.email() != null ? buyerInfo.email() : "",
+                                                                        "firstName", buyerInfo.fullName().trim()
+                                                                )))
+                                                        .switchIfEmpty(eventPublisher.publish(
+                                                                "notifications",
+                                                                "ORDER_DISPATCHED",
+                                                                Map.of(
+                                                                        "orderId", order.id().toString(),
+                                                                        "buyerId", order.buyerId().toString()
+                                                                )))))
                                 .then(Mono.just(dispatched)));
     }
 }

@@ -5,6 +5,7 @@ import com.agro_venta.products.application.useCase.ProcessPaymentWebhookUseCase;
 import com.agro_venta.products.domain.model.Payment;
 import com.agro_venta.products.domain.model.Shipment;
 import com.agro_venta.products.domain.port.*;
+import com.agro_venta.products.infrastructure.client.AuthServiceClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -15,9 +16,8 @@ import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.UUID;
 
-
+@Service
 public class ProcessPaymentWebhookService implements ProcessPaymentWebhookUseCase {
-
     private static final Logger log = LoggerFactory.getLogger(ProcessPaymentWebhookService.class);
     private static final String EVENT_TRANSACTION_UPDATED = "transaction.updated";
 
@@ -26,18 +26,21 @@ public class ProcessPaymentWebhookService implements ProcessPaymentWebhookUseCas
     private final ProductQueryPort  productQueryPort;
     private final ShipmentPort      shipmentPort;
     private final EventPublisherPort eventPublisher;
+    private final AuthServiceClient  authServiceClient;
 
     public ProcessPaymentWebhookService(
             OrderQueryPort orderQueryPort,
             PaymentPort paymentPort,
             ProductQueryPort productQueryPort,
             ShipmentPort shipmentPort,
-            EventPublisherPort eventPublisher) {
-        this.orderQueryPort  = orderQueryPort;
-        this.paymentPort     = paymentPort;
+            EventPublisherPort eventPublisher,
+            AuthServiceClient authServiceClient) {
+        this.orderQueryPort   = orderQueryPort;
+        this.paymentPort      = paymentPort;
         this.productQueryPort = productQueryPort;
-        this.shipmentPort    = shipmentPort;
-        this.eventPublisher  = eventPublisher;
+        this.shipmentPort     = shipmentPort;
+        this.eventPublisher   = eventPublisher;
+        this.authServiceClient = authServiceClient;
     }
 
     @Override
@@ -148,16 +151,28 @@ public class ProcessPaymentWebhookService implements ProcessPaymentWebhookUseCas
                                 "total",     order.total().toPlainString(),
                                 "paymentId", payment.id().toString()
                         )))
-                // Publish notification event (SQS → Lambda → SES email)
-                .then(eventPublisher.publish(
-                        "notifications",
-                        "ORDER_PAID",
-                        Map.of(
-                                "orderId",  order.id().toString(),
-                                "buyerId",  order.buyerId().toString(),
-                                "sellerId", order.sellerId().toString(),
-                                "total",    order.total().toPlainString()
-                        )));
+                // Publish notification event (SQS → Lambda → Brevo email)
+                .then(authServiceClient.getUserInfo(order.buyerId())
+                        .flatMap(buyerInfo -> eventPublisher.publish(
+                                "notifications",
+                                "ORDER_PAID",
+                                Map.of(
+                                        "orderId",    order.id().toString(),
+                                        "buyerId",    order.buyerId().toString(),
+                                        "sellerId",   order.sellerId().toString(),
+                                        "total",      order.total().toPlainString(),
+                                        "toEmail",    buyerInfo.email() != null ? buyerInfo.email() : "",
+                                        "firstName",  buyerInfo.fullName().trim()
+                                )))
+                        .switchIfEmpty(eventPublisher.publish(
+                                "notifications",
+                                "ORDER_PAID",
+                                Map.of(
+                                        "orderId",  order.id().toString(),
+                                        "buyerId",  order.buyerId().toString(),
+                                        "sellerId", order.sellerId().toString(),
+                                        "total",    order.total().toPlainString()
+                                ))));
     }
 
     private Mono<Void> handleFailedPayment(com.agro_venta.products.domain.model.Order order) {
