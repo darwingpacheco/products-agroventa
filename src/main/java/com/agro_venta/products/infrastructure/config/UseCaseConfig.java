@@ -1,13 +1,11 @@
 package com.agro_venta.products.infrastructure.config;
 
-import com.agro_venta.products.application.dto.CatalogQuery;
 import com.agro_venta.products.application.service.*;
 import com.agro_venta.products.application.useCase.*;
-import com.agro_venta.products.domain.model.Product;
 import com.agro_venta.products.domain.port.*;
+import com.agro_venta.products.infrastructure.client.AuthServiceClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import reactor.core.publisher.Flux;
 
 @Configuration
 public class UseCaseConfig {
@@ -30,9 +28,10 @@ public class UseCaseConfig {
             PaymentPort paymentPort,
             ProductQueryPort productQueryPort,
             ShipmentPort shipmentPort,
-            EventPublisherPort eventPublisher) {
+            EventPublisherPort eventPublisher,
+            AuthServiceClient authServiceClient) {
         return new ProcessPaymentWebhookService(
-                orderQueryPort, paymentPort, productQueryPort, shipmentPort, eventPublisher);
+                orderQueryPort, paymentPort, productQueryPort, shipmentPort, eventPublisher, authServiceClient);
     }
 
     @Bean
@@ -40,9 +39,10 @@ public class UseCaseConfig {
             ProductQueryPort productQueryPort,
             ShipmentPort shipmentPort,
             OrderQueryPort orderQueryPort,
-            EventPublisherPort eventPublisher) {
+            EventPublisherPort eventPublisher,
+            AuthServiceClient authServiceClient) {
         return new DispatchShipmentService(
-                productQueryPort, shipmentPort, orderQueryPort, eventPublisher);
+                productQueryPort, shipmentPort, orderQueryPort, eventPublisher, authServiceClient);
     }
 
     @Bean
