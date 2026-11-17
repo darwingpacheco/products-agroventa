@@ -37,13 +37,11 @@ public class ShipmentR2dbcAdapter implements ShipmentPort {
     @Override
     public Mono<Shipment> save(Shipment shipment) {
         if (shipment.id() != null) {
-            // UPDATE: only touch specific columns, preserve created_at
-            return databaseClient.sql("""
+            var spec = databaseClient.sql("""
                     UPDATE shipments
                     SET total_quantity = :qty,
                         min_quantity_threshold = :threshold,
                         status = :status,
-                        ready_at = :readyAt,
                         dispatched_at = :dispatchedAt,
                         updated_at = NOW()
                     WHERE id = :id
@@ -51,13 +49,22 @@ public class ShipmentR2dbcAdapter implements ShipmentPort {
                     .bind("qty", shipment.totalQuantity())
                     .bind("threshold", shipment.minQuantityThreshold())
                     .bind("status", shipment.status())
-                    .bind("readyAt", shipment.readyAt())
-                    .bind("dispatchedAt", shipment.dispatchedAt())
-                    .bind("id", shipment.id())
-                    .fetch().rowsUpdated()
-                    .then(repository.findById(shipment.id()).map(this::toDomain));
+                    .bind("id", shipment.id());
+
+                    if (shipment.readyAt() != null) {
+                        spec = spec.bind("readyAt", shipment.readyAt());
+                    } else {
+                        spec = spec.bindNull("readyAt", java.time.OffsetDateTime.class);
+                    }
+                    if (shipment.dispatchedAt() != null) {
+                        spec = spec.bind("dispatchedAt", shipment.dispatchedAt());
+                    } else {
+                        spec = spec.bindNull("dispatchedAt", java.time.OffsetDateTime.class);
+                    }
+
+                    return spec.fetch().rowsUpdated()
+                            .then(repository.findById(shipment.id()).map(this::toDomain));
         }
-        // INSERT: let DB defaults handle created_at / updated_at
         return repository.save(toEntity(shipment)).map(this::toDomain);
     }
 
