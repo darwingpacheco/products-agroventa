@@ -16,6 +16,9 @@ public interface OrderR2dbcRepository extends ReactiveCrudRepository<OrderEntity
     @Query("SELECT * FROM orders WHERE seller_id = :sellerId AND status = :status ORDER BY created_at DESC")
     Flux<OrderEntity> findBySellerIdAndStatus(UUID sellerId, String status);
 
+    @Query("SELECT * FROM orders WHERE seller_id = :sellerId AND status != 'CANCELADO' ORDER BY created_at DESC")
+    Flux<OrderEntity> findAllBySellerId(UUID sellerId);
+
     @Query("SELECT * FROM orders WHERE product_id = :productId AND status = 'PAGADO'")
     Flux<OrderEntity> findPaidByProductId(UUID productId);
 }

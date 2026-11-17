@@ -108,7 +108,10 @@ public class DispatchShipmentService implements DispatchShipmentUseCase {
                                                                 Map.of(
                                                                         "orderId", order.id().toString(),
                                                                         "buyerId", order.buyerId().toString()
-                                                                )))))
+                                                                )))
+                                                        .onErrorResume(e -> {
+                                                            return Mono.empty();
+                                                        })))
                                 .then(Mono.just(dispatched)));
     }
 }

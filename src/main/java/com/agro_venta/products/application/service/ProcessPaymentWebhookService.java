@@ -170,7 +170,11 @@ public class ProcessPaymentWebhookService implements ProcessPaymentWebhookUseCas
                                         "buyerId",  order.buyerId().toString(),
                                         "sellerId", order.sellerId().toString(),
                                         "total",    order.total().toPlainString()
-                                ))));
+                                )))
+                        .onErrorResume(e -> {
+                            log.warn("Could not send payment notification for order {}: {}", order.id(), e.getMessage());
+                            return Mono.empty();
+                        }));
     }
 
     private Mono<Void> handleFailedPayment(com.agro_venta.products.domain.model.Order order) {

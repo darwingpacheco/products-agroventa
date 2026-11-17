@@ -16,6 +16,8 @@ public interface OrderQueryPort {
 
     Flux<Order> findBySellerIdAndStatus(UUID sellerId, String status);
 
+    Flux<Order> findAllBySellerId(UUID sellerId);
+
     Flux<Order> findPaidOrdersByProductId(UUID productId);
 
     Mono<Order> updateStatus(UUID orderId, String status);

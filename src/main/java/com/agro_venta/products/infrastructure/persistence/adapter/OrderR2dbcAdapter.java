@@ -44,6 +44,11 @@ public class OrderR2dbcAdapter implements OrderQueryPort {
     }
 
     @Override
+    public Flux<Order> findAllBySellerId(UUID sellerId) {
+        return repository.findAllBySellerId(sellerId).map(this::toDomain);
+    }
+
+    @Override
     public Flux<Order> findPaidOrdersByProductId(UUID productId) {
         return repository.findPaidByProductId(productId).map(this::toDomain);
     }
