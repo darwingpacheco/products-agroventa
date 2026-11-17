@@ -51,11 +51,6 @@ public class ShipmentR2dbcAdapter implements ShipmentPort {
                     .bind("status", shipment.status())
                     .bind("id", shipment.id());
 
-                    if (shipment.readyAt() != null) {
-                        spec = spec.bind("readyAt", shipment.readyAt());
-                    } else {
-                        spec = spec.bindNull("readyAt", java.time.OffsetDateTime.class);
-                    }
                     if (shipment.dispatchedAt() != null) {
                         spec = spec.bind("dispatchedAt", shipment.dispatchedAt());
                     } else {
