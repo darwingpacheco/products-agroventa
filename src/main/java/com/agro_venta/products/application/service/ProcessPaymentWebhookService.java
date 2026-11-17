@@ -8,7 +8,6 @@ import com.agro_venta.products.domain.port.*;
 import com.agro_venta.products.infrastructure.client.AuthServiceClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
@@ -16,7 +15,6 @@ import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.UUID;
 
-@Service
 public class ProcessPaymentWebhookService implements ProcessPaymentWebhookUseCase {
     private static final Logger log = LoggerFactory.getLogger(ProcessPaymentWebhookService.class);
     private static final String EVENT_TRANSACTION_UPDATED = "transaction.updated";
